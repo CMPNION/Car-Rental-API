@@ -11,14 +11,11 @@ import (
 func main(){
     fmt.Println("Car Rental System API")
 
-    db := database.InitDB("../../car_rental.db")
-    app := server.GetNewServer(":8080", db)
+    db := database.InitDB("car_rental.db")
+    app := server.GetNewServer(":4000", db)
 
 
     if err := app.Start(); err != nil {
         panic("Failed to start Server: " + err.Error())
     }
-
-
-
 }
