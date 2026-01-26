@@ -6,10 +6,16 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/CMPNION/Car-Rental-API.git/internal/models"
 )
 
 // InitDB инициализирует файл базы данных и запускает миграции
 func InitDB(filepath string) *gorm.DB {
+	if filepath == "" {
+		filepath = "car_rental.db"
+	}
+
 	db, err := gorm.Open(sqlite.Open(filepath), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info), // Логируем все SQL запросы
 	})
@@ -21,9 +27,10 @@ func InitDB(filepath string) *gorm.DB {
 	// Автоматическое создание таблиц на основе структур (Auto-Migration)
 	// Добавляйте сюда все ваши модели
 	err = db.AutoMigrate(
-		&User{},
-		&Car{},
-		&Booking{},
+		&models.User{},
+		&models.Car{},
+		&models.Rental{},
+		&models.Transaction{},
 	)
 
 	if err != nil {
@@ -32,27 +39,4 @@ func InitDB(filepath string) *gorm.DB {
 
 	log.Println("Database connection established and migrated")
 	return db
-}
-
-
-type Car struct {
-	gorm.Model
-	Brand  string `json:"brand"`
-    CarModel  string `json:"carModel"`
-	Status string `json:"status" gorm:"default:'available'"` // available, rented, maintenance
-}
-
-type User struct {
-	gorm.Model
-	Email    string `gorm:"uniqueIndex"`
-	Password string `json:"-"`
-	Role     string `gorm:"default:'client'"`
-}
-
-type Booking struct {
-	gorm.Model
-	UserID uint
-	CarID  uint
-	Start  string
-	End    string
 }
