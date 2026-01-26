@@ -22,12 +22,11 @@ func GetNewServer(addr string, db *gorm.DB) *Server {
 		db:     db,
 		addr:   addr,
 	}
-
+	srv.registerCarRoutes()
 	srv.registerRoutes()
 
 	return srv
 }
-
 
 func (s *Server) Start() error {
 
@@ -48,6 +47,8 @@ func (s *Server) registerRoutes() {
 		jwtSecret = "dev-secret"
 		log.Println("JWT_SECRET is empty, using dev-secret")
 	}
+
+	s.jwtSecret = jwtSecret
 
 	jwtMiddleware := middleware.JWTAuthMiddleware(jwtSecret)
 	helloService := hello.NewService()
