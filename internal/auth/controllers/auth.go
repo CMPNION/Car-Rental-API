@@ -5,8 +5,11 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/services"
 	"github.com/go-playground/validator/v10"
+
+	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
+	"github.com/CMPNION/Car-Rental-API.git/internal/auth/services"
+	"github.com/CMPNION/Car-Rental-API.git/internal/models"
 )
 
 type Handler struct {
@@ -17,10 +20,11 @@ func NewHandler(svc *services.AuthService) *Handler {
 	return &Handler{svc: svc}
 }
 
-func RegisterHandlers(mux *http.ServeMux, svc *services.AuthService) {
+func RegisterHandlers(mux *http.ServeMux, svc *services.AuthService, jwtSecret string) {
 	h := NewHandler(svc)
 	mux.HandleFunc("/auth/register", h.register)
 	mux.HandleFunc("/auth/login", h.login)
+	mux.Handle("/auth/me", middleware.JWTAuthMiddleware(jwtSecret)(http.HandlerFunc(h.me)))
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
@@ -77,6 +81,24 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+
+	role, ok := middleware.RoleFromContext(r.Context())
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"role":     role,
+		"is_admin": role == models.UserRoleAdmin,
+	})
 }
 
 func decodeJSON(r *http.Request, dst any) error {
