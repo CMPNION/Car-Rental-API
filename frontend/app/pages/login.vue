@@ -41,11 +41,8 @@
 </template>
 
 <script setup lang="ts">
-import axios from 'axios'
-
 const token = useCookie('token')
-const config = useRuntimeConfig()
-const apiBase = config.public.apiBase as string
+const { fetcher } = useApi()
 
 const error = ref('')
 
@@ -64,22 +61,28 @@ const registerForm = reactive({
 const login = async () => {
   error.value = ''
   try {
-    const response = await axios.post<{ token: string }>(`${apiBase}/auth/login`, loginForm)
-    token.value = response.data.token
+    const response = await fetcher<{ token: string }>(`/auth/login`, {
+      method: 'POST',
+      body: loginForm
+    })
+    token.value = response.token
     navigateTo('/')
   } catch (err: any) {
-    error.value = err?.response?.data?.error ?? 'Login failed'
+    error.value = err?.data?.error ?? err?.message ?? 'Login failed'
   }
 }
 
 const register = async () => {
   error.value = ''
   try {
-    const response = await axios.post<{ token: string }>(`${apiBase}/auth/register`, registerForm)
-    token.value = response.data.token
+    const response = await fetcher<{ token: string }>(`/auth/register`, {
+      method: 'POST',
+      body: registerForm
+    })
+    token.value = response.token
     navigateTo('/')
   } catch (err: any) {
-    error.value = err?.response?.data?.error ?? 'Registration failed'
+    error.value = err?.data?.error ?? err?.message ?? 'Registration failed'
   }
 }
 </script>

@@ -55,7 +55,7 @@ func (s *Server) registerRoutes() {
 	s.router.Handle("/hello", jwtMiddleware(http.HandlerFunc(hello.Handler(helloService))))
 
 	authService := services.NewAuthService(s.db, jwtSecret)
-	controllers.RegisterHandlers(s.router, authService)
+	controllers.RegisterHandlers(s.router, authService, jwtSecret)
 }
 
 func (*Server) withCORS(next http.Handler) http.Handler {
