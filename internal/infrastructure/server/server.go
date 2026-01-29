@@ -56,6 +56,7 @@ func (s *Server) registerRoutes() {
 
 	authService := services.NewAuthService(s.db, jwtSecret)
 	controllers.RegisterHandlers(s.router, authService, jwtSecret)
+	s.router.Handle("/api/v1/rentals", jwtMiddleware(http.HandlerFunc(s.createRentalHandler)))
 }
 
 func (*Server) withCORS(next http.Handler) http.Handler {
