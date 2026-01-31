@@ -75,8 +75,10 @@ type Rental struct {
 
 type Transaction struct {
 	gorm.Model
-	RentalID uint    `json:"rental_id" gorm:"column:rental_id;uniqueIndex" validate:"required"`
-	Amount   float64 `json:"amount" gorm:"column:amount" validate:"required,gt=0"`
-	Status   string  `json:"status" gorm:"column:status" validate:"required,oneof=success failed"`
-	Rental   *Rental `json:"rental" gorm:"foreignKey:RentalID"`
+	UserID   uint     `json:"user_id" gorm:"column:user_id;index" validate:"required"`
+	RentalID *uint    `json:"rental_id,omitempty" gorm:"column:rental_id;index"`
+	Type     string   `json:"type" gorm:"column:type" validate:"required,oneof=payment topup"`
+	Amount   float64  `json:"amount" gorm:"column:amount" validate:"required,gt=0"`
+	Status   string   `json:"status" gorm:"column:status" validate:"required,oneof=success failed"`
+	Rental   *Rental  `json:"rental,omitempty" gorm:"foreignKey:RentalID"`
 }

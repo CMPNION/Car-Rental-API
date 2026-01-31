@@ -71,7 +71,7 @@ func JWTAuthMiddleware(secret string) func(http.Handler) http.Handler {
 func writeUnauthorized(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(http.StatusUnauthorized)
-	_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
+	_, _ = w.Write([]byte(`{"status":"error","message":"unauthorized"}`))
 }
 
 func UserIDFromContext(ctx context.Context) (uint, bool) {

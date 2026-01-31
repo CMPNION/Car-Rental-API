@@ -27,9 +27,13 @@ func CalculatePrice(basePricePerHour float64, start, end time.Time, userRating f
 
 // CheckAvailability is an isolated check for overbooking
 func (s *Server) CheckAvailability(carID uint, start, end time.Time) (bool, error) {
+	return checkAvailabilityWithDB(s.db, carID, start, end)
+}
+
+func checkAvailabilityWithDB(db *gorm.DB, carID uint, start, end time.Time) (bool, error) {
 	var existingRental models.Rental
 	// Formula for interval intersection
-	err := s.db.Where("car_id = ? AND status != ? AND start_date < ? AND end_date > ?",
+	err := db.Where("car_id = ? AND status != ? AND start_date < ? AND end_date > ?",
 		carID, models.RentalStatusCancelled, end, start).First(&existingRental).Error
 
 	if err == nil {

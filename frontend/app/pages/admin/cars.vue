@@ -57,8 +57,28 @@
         <div class="card__title">{{ car.mark }} {{ car.model }}</div>
         <div class="card__meta">ID: {{ getCarId(car) }}</div>
         <div class="card__meta">Категория: {{ car.category }}</div>
-        <div class="card__meta">Статус: <span class="badge">{{ car.status }}</span></div>
+        <div class="card__meta">
+          Статус:
+          <span class="badge" :class="statusClass(car.status)">{{ car.status }}</span>
+        </div>
         <div class="card__meta">Цена/час: {{ car.price_per_hour }}</div>
+        <div class="row">
+          <label class="field" style="min-width: 160px;">
+            Статус
+            <select v-model="statusUpdates[getCarId(car)]">
+              <option value="available">Available</option>
+              <option value="booked">Booked</option>
+              <option value="maintenance">Maintenance</option>
+            </select>
+          </label>
+          <button
+            class="secondary"
+            @click="updateStatus(getCarId(car))"
+            :disabled="statusUpdates[getCarId(car)] === car.status"
+          >
+            Обновить статус
+          </button>
+        </div>
         <div class="row">
           <button class="secondary" @click="startEdit(car)">Редактировать</button>
           <button class="danger" @click="deleteCar(getCarId(car))">Удалить</button>
@@ -114,6 +134,12 @@
 </template>
 
 <script setup lang="ts">
+import admin from '~/middleware/admin'
+
+definePageMeta({
+  middleware: [admin]
+})
+
 const { fetcher, authFetch } = useApi()
 
 type Car = {
@@ -138,8 +164,13 @@ const cars = computed(() => data.value ?? [])
 
 const errorMessage = computed(() => {
   if (!error.value) return ''
-  return (error.value as any)?.data?.error ?? (error.value as any)?.message ?? 'Ошибка запроса'
+  return (error.value as any)?.data?.message ?? (error.value as any)?.data?.error ?? (error.value as any)?.message ?? 'Ошибка запроса'
 })
+
+const statusClass = (status: string) => {
+  const normalized = status?.toLowerCase()
+  return normalized ? `badge--${normalized}` : ''
+}
 
 const createForm = reactive({
   mark: '',
@@ -151,6 +182,21 @@ const createForm = reactive({
 })
 
 const createError = ref('')
+
+const statusUpdates = reactive<Record<number, string>>({})
+
+watch(
+  cars,
+  (list) => {
+    list.forEach((car) => {
+      const id = getCarId(car)
+      if (!statusUpdates[id]) {
+        statusUpdates[id] = car.status
+      }
+    })
+  },
+  { immediate: true }
+)
 
 const createCar = async () => {
   createError.value = ''
@@ -174,7 +220,7 @@ const createCar = async () => {
     createForm.price_per_hour = 1
     createForm.metadata = ''
   } catch (err: any) {
-    createError.value = err?.data?.error ?? err?.message ?? 'Не удалось создать машину'
+    createError.value = err?.data?.message ?? err?.data?.error ?? err?.message ?? 'Не удалось создать машину'
   }
 }
 
@@ -226,7 +272,7 @@ const updateCar = async () => {
     await refresh()
     editing.value = false
   } catch (err: any) {
-    editError.value = err?.data?.error ?? err?.message ?? 'Не удалось обновить машину'
+    editError.value = err?.data?.message ?? err?.data?.error ?? err?.message ?? 'Не удалось обновить машину'
   }
 }
 
@@ -237,7 +283,20 @@ const deleteCar = async (id: number) => {
     })
     await refresh()
   } catch (err: any) {
-    editError.value = err?.data?.error ?? err?.message ?? 'Не удалось удалить машину'
+    editError.value = err?.data?.message ?? err?.data?.error ?? err?.message ?? 'Не удалось удалить машину'
+  }
+}
+
+const updateStatus = async (id: number) => {
+  editError.value = ''
+  try {
+    await authFetch(`/api/v1/cars/${id}`, {
+      method: 'PUT',
+      body: { status: statusUpdates[id] }
+    })
+    await refresh()
+  } catch (err: any) {
+    editError.value = err?.data?.message ?? err?.data?.error ?? err?.message ?? 'Не удалось обновить статус'
   }
 }
 </script>

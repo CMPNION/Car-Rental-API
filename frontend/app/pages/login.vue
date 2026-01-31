@@ -68,7 +68,7 @@ const login = async () => {
     token.value = response.token
     navigateTo('/')
   } catch (err: any) {
-    error.value = err?.data?.error ?? err?.message ?? 'Login failed'
+    error.value = err?.data?.message ?? err?.data?.error ?? err?.message ?? 'Login failed'
   }
 }
 
@@ -82,7 +82,7 @@ const register = async () => {
     token.value = response.token
     navigateTo('/')
   } catch (err: any) {
-    error.value = err?.data?.error ?? err?.message ?? 'Registration failed'
+    error.value = err?.data?.message ?? err?.data?.error ?? err?.message ?? 'Registration failed'
   }
 }
 </script>
