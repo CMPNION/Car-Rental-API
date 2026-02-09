@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
+	authhttp "github.com/CMPNION/Car-Rental-API.git/internal/interface/http/auth"
 	"gorm.io/gorm"
 )
 
@@ -58,7 +58,7 @@ func (s *Server) rentalActionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) createRental(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -80,17 +80,17 @@ func (s *Server) createRental(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var created models.Rental
+	var created entity.Rental
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		var car models.Car
+		var car entity.Car
 		if err := tx.First(&car, req.CarID).Error; err != nil {
 			return err
 		}
-		if car.Status != models.CarStatusAvailable {
+		if car.Status != entity.CarStatusAvailable {
 			return errors.New("car not available")
 		}
 
-		var user models.User
+		var user entity.User
 		if err := tx.First(&user, userID).Error; err != nil {
 			return err
 		}
@@ -104,21 +104,21 @@ func (s *Server) createRental(w http.ResponseWriter, r *http.Request) {
 		}
 
 		finalPrice := CalculatePrice(car.PricePerHour, req.StartDate, req.EndDate, user.Rating)
-		created = models.Rental{
+		created = entity.Rental{
 			UserID:     userID,
 			CarID:      req.CarID,
 			StartDate:  req.StartDate.UTC(),
 			EndDate:    req.EndDate.UTC(),
 			TotalPrice: finalPrice,
-			Status:     models.RentalStatusPending,
+			Status:     entity.RentalStatusPending,
 		}
 
 		if err := tx.Create(&created).Error; err != nil {
 			return err
 		}
 
-		if err := tx.Model(&models.Car{}).Where("id = ?", req.CarID).
-			Update("status", models.CarStatusBooked).Error; err != nil {
+		if err := tx.Model(&entity.Car{}).Where("id = ?", req.CarID).
+			Update("status", entity.CarStatusBooked).Error; err != nil {
 			return err
 		}
 
@@ -148,15 +148,15 @@ func (s *Server) createRental(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listRentals(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	role := getRoleFromContext(r)
-	q := s.db.Model(&models.Rental{})
-	if role != models.UserRoleAdmin {
+	q := s.db.Model(&entity.Rental{})
+	if role != entity.UserRoleAdmin {
 		q = q.Where("user_id = ?", userID)
 	} else if v := r.URL.Query().Get("user_id"); v != "" {
 		id, err := strconv.Atoi(v)
@@ -167,7 +167,7 @@ func (s *Server) listRentals(w http.ResponseWriter, r *http.Request) {
 		q = q.Where("user_id = ?", id)
 	}
 
-	var rentals []models.Rental
+	var rentals []entity.Rental
 	if err := q.Find(&rentals).Error; err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "database error")
 		return
@@ -177,7 +177,7 @@ func (s *Server) listRentals(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) payRental(w http.ResponseWriter, r *http.Request, rentalID uint) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -186,19 +186,19 @@ func (s *Server) payRental(w http.ResponseWriter, r *http.Request, rentalID uint
 	role := getRoleFromContext(r)
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		var rental models.Rental
+		var rental entity.Rental
 		if err := tx.First(&rental, rentalID).Error; err != nil {
 			return err
 		}
 
-		if role != models.UserRoleAdmin && rental.UserID != userID {
+		if role != entity.UserRoleAdmin && rental.UserID != userID {
 			return errors.New("forbidden")
 		}
-		if rental.Status != models.RentalStatusPending {
+		if rental.Status != entity.RentalStatusPending {
 			return errors.New("invalid status")
 		}
 
-		res := tx.Model(&models.User{}).
+		res := tx.Model(&entity.User{}).
 			Where("id = ? AND balance >= ?", rental.UserID, rental.TotalPrice).
 			Update("balance", gorm.Expr("balance - ?", rental.TotalPrice))
 		if res.Error != nil {
@@ -208,18 +208,18 @@ func (s *Server) payRental(w http.ResponseWriter, r *http.Request, rentalID uint
 			return errors.New("insufficient balance")
 		}
 
-		if err := tx.Model(&models.Rental{}).
-			Where("id = ? AND status = ?", rentalID, models.RentalStatusPending).
-			Update("status", models.RentalStatusActive).Error; err != nil {
+		if err := tx.Model(&entity.Rental{}).
+			Where("id = ? AND status = ?", rentalID, entity.RentalStatusPending).
+			Update("status", entity.RentalStatusActive).Error; err != nil {
 			return err
 		}
 
-			transaction := models.Transaction{
+			transaction := entity.Transaction{
 				UserID:   rental.UserID,
 				RentalID: &rentalID,
 				Type:     "payment",
 				Amount:   rental.TotalPrice,
-				Status:   models.TransactionStatusSuccess,
+				Status:   entity.TransactionStatusSuccess,
 			}
 			if err := tx.Create(&transaction).Error; err != nil {
 				return err
@@ -248,7 +248,7 @@ func (s *Server) payRental(w http.ResponseWriter, r *http.Request, rentalID uint
 }
 
 func (s *Server) finishRental(w http.ResponseWriter, r *http.Request, rentalID uint) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -257,23 +257,23 @@ func (s *Server) finishRental(w http.ResponseWriter, r *http.Request, rentalID u
 	role := getRoleFromContext(r)
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		var rental models.Rental
+		var rental entity.Rental
 		if err := tx.First(&rental, rentalID).Error; err != nil {
 			return err
 		}
-		if role != models.UserRoleAdmin && rental.UserID != userID {
+		if role != entity.UserRoleAdmin && rental.UserID != userID {
 			return errors.New("forbidden")
 		}
-		if rental.Status != models.RentalStatusActive {
+		if rental.Status != entity.RentalStatusActive {
 			return errors.New("invalid status")
 		}
 
-		if err := tx.Model(&models.Rental{}).Where("id = ?", rentalID).
-			Update("status", models.RentalStatusCompleted).Error; err != nil {
+		if err := tx.Model(&entity.Rental{}).Where("id = ?", rentalID).
+			Update("status", entity.RentalStatusCompleted).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&models.Car{}).Where("id = ?", rental.CarID).
-			Update("status", models.CarStatusAvailable).Error; err != nil {
+		if err := tx.Model(&entity.Car{}).Where("id = ?", rental.CarID).
+			Update("status", entity.CarStatusAvailable).Error; err != nil {
 			return err
 		}
 		return nil
@@ -297,7 +297,7 @@ func (s *Server) finishRental(w http.ResponseWriter, r *http.Request, rentalID u
 }
 
 func (s *Server) cancelRental(w http.ResponseWriter, r *http.Request, rentalID uint) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -306,26 +306,26 @@ func (s *Server) cancelRental(w http.ResponseWriter, r *http.Request, rentalID u
 	role := getRoleFromContext(r)
 
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		var rental models.Rental
+		var rental entity.Rental
 		if err := tx.First(&rental, rentalID).Error; err != nil {
 			return err
 		}
-		if role != models.UserRoleAdmin && rental.UserID != userID {
+		if role != entity.UserRoleAdmin && rental.UserID != userID {
 			return errors.New("forbidden")
 		}
-		if rental.Status != models.RentalStatusPending {
+		if rental.Status != entity.RentalStatusPending {
 			return errors.New("invalid status")
 		}
 		if time.Now().UTC().After(rental.StartDate) {
 			return errors.New("too late")
 		}
 
-		if err := tx.Model(&models.Rental{}).Where("id = ?", rentalID).
-			Update("status", models.RentalStatusCancelled).Error; err != nil {
+		if err := tx.Model(&entity.Rental{}).Where("id = ?", rentalID).
+			Update("status", entity.RentalStatusCancelled).Error; err != nil {
 			return err
 		}
-		if err := tx.Model(&models.Car{}).Where("id = ?", rental.CarID).
-			Update("status", models.CarStatusAvailable).Error; err != nil {
+		if err := tx.Model(&entity.Car{}).Where("id = ?", rental.CarID).
+			Update("status", entity.CarStatusAvailable).Error; err != nil {
 			return err
 		}
 		return nil

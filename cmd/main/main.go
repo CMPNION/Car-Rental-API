@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/infrastructure/database"
-	"github.com/CMPNION/Car-Rental-API.git/internal/infrastructure/server"
+	"github.com/CMPNION/Car-Rental-API.git/internal/infra/database"
+	"github.com/CMPNION/Car-Rental-API.git/internal/interface/http/server"
 )
 
 

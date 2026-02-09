@@ -9,10 +9,10 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/controllers"
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/services"
-	"github.com/CMPNION/Car-Rental-API.git/internal/hello"
+	authhttp "github.com/CMPNION/Car-Rental-API.git/internal/interface/http/auth"
+	hellohttp "github.com/CMPNION/Car-Rental-API.git/internal/interface/http/hello"
+	authuc "github.com/CMPNION/Car-Rental-API.git/internal/usecase/auth"
+	hellouc "github.com/CMPNION/Car-Rental-API.git/internal/usecase/hello"
 )
 
 func GetNewServer(addr string, db *gorm.DB) *Server {
@@ -50,12 +50,12 @@ func (s *Server) registerRoutes() {
 
 	s.jwtSecret = jwtSecret
 
-	jwtMiddleware := middleware.JWTAuthMiddleware(jwtSecret)
-	helloService := hello.NewService()
-	s.router.Handle("/hello", jwtMiddleware(http.HandlerFunc(hello.Handler(helloService))))
+	jwtMiddleware := authhttp.JWTAuthMiddleware(jwtSecret)
+	helloService := hellouc.NewService()
+	s.router.Handle("/hello", jwtMiddleware(http.HandlerFunc(hellohttp.Handler(helloService))))
 
-	authService := services.NewAuthService(s.db, jwtSecret)
-	controllers.RegisterHandlers(s.router, authService, jwtSecret)
+	authService := authuc.NewAuthService(s.db, jwtSecret)
+	authhttp.RegisterHandlers(s.router, authService, jwtSecret)
 
 	s.router.Handle("/api/v1/rentals", jwtMiddleware(http.HandlerFunc(s.rentalsHandler)))
 	s.router.Handle("/api/v1/rentals/", jwtMiddleware(http.HandlerFunc(s.rentalActionHandler)))

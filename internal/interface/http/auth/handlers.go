@@ -1,4 +1,4 @@
-package controllers
+package authhttp
 
 import (
 	"encoding/json"
@@ -7,24 +7,23 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/services"
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
+	authuc "github.com/CMPNION/Car-Rental-API.git/internal/usecase/auth"
 )
 
 type Handler struct {
-	svc *services.AuthService
+	svc *authuc.AuthService
 }
 
-func NewHandler(svc *services.AuthService) *Handler {
+func NewHandler(svc *authuc.AuthService) *Handler {
 	return &Handler{svc: svc}
 }
 
-func RegisterHandlers(mux *http.ServeMux, svc *services.AuthService, jwtSecret string) {
+func RegisterHandlers(mux *http.ServeMux, svc *authuc.AuthService, jwtSecret string) {
 	h := NewHandler(svc)
 	mux.HandleFunc("/auth/register", h.register)
 	mux.HandleFunc("/auth/login", h.login)
-	mux.Handle("/auth/me", middleware.JWTAuthMiddleware(jwtSecret)(http.HandlerFunc(h.me)))
+	mux.Handle("/auth/me", JWTAuthMiddleware(jwtSecret)(http.HandlerFunc(h.me)))
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +32,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req services.RegisterRequest
+	var req authuc.RegisterRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -42,7 +41,7 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.Register(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, services.ErrEmailTaken):
+		case errors.Is(err, authuc.ErrEmailTaken):
 			writeError(w, http.StatusBadRequest, "email already taken")
 		case isValidationError(err):
 			writeError(w, http.StatusBadRequest, err.Error())
@@ -61,7 +60,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req services.LoginRequest
+	var req authuc.LoginRequest
 	if err := decodeJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -70,7 +69,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.svc.Login(req)
 	if err != nil {
 		switch {
-		case errors.Is(err, services.ErrInvalidCredentials):
+		case errors.Is(err, authuc.ErrInvalidCredentials):
 			writeError(w, http.StatusUnauthorized, "invalid credentials")
 		case isValidationError(err):
 			writeError(w, http.StatusBadRequest, err.Error())
@@ -89,7 +88,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	role, ok := middleware.RoleFromContext(r.Context())
+	role, ok := RoleFromContext(r.Context())
 	if !ok {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -97,7 +96,7 @@ func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"role":     role,
-		"is_admin": role == models.UserRoleAdmin,
+		"is_admin": role == entity.UserRoleAdmin,
 	})
 }
 

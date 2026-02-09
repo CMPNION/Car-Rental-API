@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
 	"gorm.io/gorm"
 )
 
@@ -31,10 +31,10 @@ func (s *Server) CheckAvailability(carID uint, start, end time.Time) (bool, erro
 }
 
 func checkAvailabilityWithDB(db *gorm.DB, carID uint, start, end time.Time) (bool, error) {
-	var existingRental models.Rental
+	var existingRental entity.Rental
 	// Formula for interval intersection
 	err := db.Where("car_id = ? AND status != ? AND start_date < ? AND end_date > ?",
-		carID, models.RentalStatusCancelled, end, start).First(&existingRental).Error
+		carID, entity.RentalStatusCancelled, end, start).First(&existingRental).Error
 
 	if err == nil {
 		return false, nil // Match found, car is occupied

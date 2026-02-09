@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
+	authhttp "github.com/CMPNION/Car-Rental-API.git/internal/interface/http/auth"
 )
 
 type profileUpdateRequest struct {
@@ -15,7 +15,7 @@ type profileUpdateRequest struct {
 }
 
 func (s *Server) userProfileHandler(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -23,7 +23,7 @@ func (s *Server) userProfileHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		var user models.User
+		var user entity.User
 		if err := s.db.First(&user, userID).Error; err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "database error")
 			return
@@ -74,7 +74,7 @@ func (s *Server) userProfileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.db.Model(&models.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
+	if err := s.db.Model(&entity.User{}).Where("id = ?", userID).Updates(updates).Error; err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "database error")
 		return
 	}

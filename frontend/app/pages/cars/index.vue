@@ -21,11 +21,11 @@
       <label class="field">
         Диапазон цены (₽/час)
         <div class="row">
-          <input v-model.number="filters.min_price" type="number" min="0" style="max-width: 90px;" />
+          <input v-model.number="filters.min_price" type="number" :min="priceMin" :max="priceMax" style="max-width: 110px;" />
           <span>—</span>
-          <input v-model.number="filters.max_price" type="number" min="0" style="max-width: 90px;" />
+          <input v-model.number="filters.max_price" type="number" :min="priceMin" :max="priceMax" style="max-width: 110px;" />
         </div>
-        <input v-model.number="filters.max_price" type="range" min="0" max="500" />
+        <input v-model.number="filters.max_price" type="range" :min="priceMin" :max="priceMax" />
       </label>
 
       <label class="field">
@@ -94,13 +94,28 @@ const getCarId = (car: Car) => car.id ?? car.ID ?? 0
 
 const route = useRoute()
 
+const priceMin = 0
+const priceMax = 100000
+
+const toNumberOrUndefined = (value: unknown) => {
+  if (value === undefined || value === null || value === '') return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const toStringArray = (value: unknown) => {
+  if (Array.isArray(value)) return value.map((item) => String(item))
+  if (value !== undefined && value !== null && value !== '') return [String(value)]
+  return []
+}
+
 const filters = reactive({
   search: String(route.query.search ?? ''),
-  categories: [] as string[],
-  min_price: undefined as number | undefined,
-  max_price: 200 as number | undefined,
-  onlyAvailable: false,
-  sorting: ''
+  categories: toStringArray(route.query.category),
+  min_price: toNumberOrUndefined(route.query.min_price),
+  max_price: toNumberOrUndefined(route.query.max_price) ?? priceMax,
+  onlyAvailable: String(route.query.status ?? '') === 'available',
+  sorting: String(route.query.sorting ?? '')
 })
 
 const query = computed(() => {
@@ -108,6 +123,7 @@ const query = computed(() => {
   if (filters.onlyAvailable) q.status = 'available'
   if (filters.min_price !== undefined && filters.min_price !== null) q.min_price = String(filters.min_price)
   if (filters.max_price !== undefined && filters.max_price !== null) q.max_price = String(filters.max_price)
+  if (filters.categories.length === 1) q.category = filters.categories[0]
 
   if (filters.sorting === 'price_asc') {
     q.sort = 'price_per_hour'
@@ -130,6 +146,24 @@ const { data, pending, error, refresh } = await useAsyncData<Car[]>(
 )
 
 watch(query, () => refresh(), { deep: true })
+
+const clampPrice = (value: number | undefined) => {
+  if (value === undefined || value === null) return undefined
+  return Math.min(priceMax, Math.max(priceMin, value))
+}
+
+watch(
+  () => [filters.min_price, filters.max_price],
+  () => {
+    const min = clampPrice(filters.min_price)
+    const max = clampPrice(filters.max_price)
+    if (min !== filters.min_price) filters.min_price = min
+    if (max !== filters.max_price) filters.max_price = max
+    if (min !== undefined && max !== undefined && min > max) {
+      filters.min_price = max
+    }
+  }
+)
 
 const cars = computed(() => data.value ?? [])
 
@@ -159,7 +193,7 @@ const resetFilters = () => {
   filters.search = ''
   filters.categories = []
   filters.min_price = undefined
-  filters.max_price = 200
+  filters.max_price = priceMax
   filters.onlyAvailable = false
   filters.sorting = ''
 }

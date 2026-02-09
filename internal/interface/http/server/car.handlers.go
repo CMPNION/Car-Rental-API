@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
+	authhttp "github.com/CMPNION/Car-Rental-API.git/internal/interface/http/auth"
 	"gorm.io/gorm"
 )
 
 func getRoleFromContext(r *http.Request) string {
-	role, ok := middleware.RoleFromContext(r.Context())
+	role, ok := authhttp.RoleFromContext(r.Context())
 	if !ok {
 		return ""
 	}
@@ -20,11 +20,11 @@ func getRoleFromContext(r *http.Request) string {
 }
 
 func (s *Server) adminOnly(next http.HandlerFunc) http.HandlerFunc {
-	jwtMw := middleware.JWTAuthMiddleware(s.jwtSecret)
+	jwtMw := authhttp.JWTAuthMiddleware(s.jwtSecret)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		jwtMw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if getRoleFromContext(r) != models.UserRoleAdmin {
+			if getRoleFromContext(r) != entity.UserRoleAdmin {
 				RespondWithError(w, http.StatusForbidden, "admin only")
 				return
 			}
@@ -37,7 +37,7 @@ func (s *Server) carsHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		q := s.db.Model(&models.Car{})
+		q := s.db.Model(&entity.Car{})
 
 		if v := r.URL.Query().Get("mark"); v != "" {
 			q = q.Where("mark = ?", v)
@@ -97,7 +97,7 @@ func (s *Server) carsHandler(w http.ResponseWriter, r *http.Request) {
 			q = q.Offset(off)
 		}
 
-		var cars []models.Car
+		var cars []entity.Car
 		if err := q.Find(&cars).Error; err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "database error")
 			return
@@ -106,7 +106,7 @@ func (s *Server) carsHandler(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodPost:
 		s.adminOnly(func(w http.ResponseWriter, r *http.Request) {
-			var payload models.Car
+			var payload entity.Car
 			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 				RespondWithError(w, http.StatusBadRequest, "invalid JSON")
 				return
@@ -126,19 +126,19 @@ func (s *Server) carsHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			if payload.Category != models.CarCategoryEconomy &&
-				payload.Category != models.CarCategoryBusiness &&
-				payload.Category != models.CarCategoryLuxury {
+			if payload.Category != entity.CarCategoryEconomy &&
+				payload.Category != entity.CarCategoryBusiness &&
+				payload.Category != entity.CarCategoryLuxury {
 				RespondWithError(w, http.StatusBadRequest, "invalid category")
 				return
 			}
 
 			if payload.Status == "" {
-				payload.Status = models.CarStatusAvailable
+				payload.Status = entity.CarStatusAvailable
 			}
-			if payload.Status != models.CarStatusAvailable &&
-				payload.Status != models.CarStatusBooked &&
-				payload.Status != models.CarStatusMaintenance {
+			if payload.Status != entity.CarStatusAvailable &&
+				payload.Status != entity.CarStatusBooked &&
+				payload.Status != entity.CarStatusMaintenance {
 				RespondWithError(w, http.StatusBadRequest, "invalid status")
 				return
 			}
@@ -171,7 +171,7 @@ func (s *Server) carByIDHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 
 	case http.MethodGet:
-		var car models.Car
+		var car entity.Car
 		if err := s.db.First(&car, id).Error; err != nil {
 			if err == gorm.ErrRecordNotFound {
 				RespondWithError(w, http.StatusNotFound, "car not found")
@@ -217,7 +217,7 @@ func (s *Server) carByIDHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if payload.Category != nil {
 				v := strings.ToLower(strings.TrimSpace(*payload.Category))
-				if v != models.CarCategoryEconomy && v != models.CarCategoryBusiness && v != models.CarCategoryLuxury {
+				if v != entity.CarCategoryEconomy && v != entity.CarCategoryBusiness && v != entity.CarCategoryLuxury {
 					RespondWithError(w, http.StatusBadRequest, "invalid category")
 					return
 				}
@@ -225,7 +225,7 @@ func (s *Server) carByIDHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			if payload.Status != nil {
 				v := strings.ToLower(strings.TrimSpace(*payload.Status))
-				if v != models.CarStatusAvailable && v != models.CarStatusBooked && v != models.CarStatusMaintenance {
+				if v != entity.CarStatusAvailable && v != entity.CarStatusBooked && v != entity.CarStatusMaintenance {
 					RespondWithError(w, http.StatusBadRequest, "invalid status")
 					return
 				}
@@ -247,7 +247,7 @@ func (s *Server) carByIDHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			res := s.db.Model(&models.Car{}).Where("id = ?", id).Updates(updates)
+			res := s.db.Model(&entity.Car{}).Where("id = ?", id).Updates(updates)
 			if res.Error != nil {
 				RespondWithError(w, http.StatusInternalServerError, "database error")
 				return
@@ -257,14 +257,14 @@ func (s *Server) carByIDHandler(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			var updated models.Car
+			var updated entity.Car
 			_ = s.db.First(&updated, id).Error
 			RespondWithJSON(w, http.StatusOK, updated)
 		})(w, r)
 
 	case http.MethodDelete:
 		s.adminOnly(func(w http.ResponseWriter, r *http.Request) {
-			res := s.db.Delete(&models.Car{}, id)
+			res := s.db.Delete(&entity.Car{}, id)
 			if res.Error != nil {
 				RespondWithError(w, http.StatusInternalServerError, "database error")
 				return
@@ -296,9 +296,9 @@ func (s *Server) carBookingsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var rentals []models.Rental
+	var rentals []entity.Rental
 	if err := s.db.
-		Where("car_id = ? AND status != ?", id, models.RentalStatusCancelled).
+		Where("car_id = ? AND status != ?", id, entity.RentalStatusCancelled).
 		Order("start_date asc").
 		Find(&rentals).Error; err != nil {
 		RespondWithError(w, http.StatusInternalServerError, "database error")

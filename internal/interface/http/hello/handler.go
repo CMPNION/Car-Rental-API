@@ -1,12 +1,16 @@
-package hello
+package hellohttp
 
-import "net/http"
+import (
+	"net/http"
 
-func RegisterHandlers(mux *http.ServeMux, uc Usecase) {
+	hellouc "github.com/CMPNION/Car-Rental-API.git/internal/usecase/hello"
+)
+
+func RegisterHandlers(mux *http.ServeMux, uc hellouc.Usecase) {
 	mux.HandleFunc("/hello", Handler(uc))
 }
 
-func Handler(uc Usecase) http.HandlerFunc {
+func Handler(uc hellouc.Usecase) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)

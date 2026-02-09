@@ -1,4 +1,4 @@
-package services
+package auth
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
 )
 
 var (
@@ -56,7 +56,7 @@ func (s *AuthService) Register(req RegisterRequest) (RegisterResponse, error) {
 		return RegisterResponse{}, err
 	}
 
-	var existing models.User
+	var existing entity.User
 	if err := s.db.Where("email = ?", req.Email).First(&existing).Error; err == nil {
 		return RegisterResponse{}, ErrEmailTaken
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -68,12 +68,12 @@ func (s *AuthService) Register(req RegisterRequest) (RegisterResponse, error) {
 		return RegisterResponse{}, err
 	}
 
-	user := models.User{
+	user := entity.User{
 		FirstName:    req.FirstName,
 		LastName:     req.LastName,
 		Email:        req.Email,
 		PasswordHash: string(hash),
-		Role:         models.UserRoleClient,
+		Role:         entity.UserRoleClient,
 		Balance:      0,
 		Rating:       0,
 	}
@@ -95,7 +95,7 @@ func (s *AuthService) Login(req LoginRequest) (LoginResponse, error) {
 		return LoginResponse{}, err
 	}
 
-	var user models.User
+	var user entity.User
 	if err := s.db.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return LoginResponse{}, ErrInvalidCredentials

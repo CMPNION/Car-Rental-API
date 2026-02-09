@@ -6,12 +6,15 @@ type ApiResponse<T> = {
 
 export const useApi = () => {
   const config = useRuntimeConfig()
-  const baseURL = config.public.apiBase as string
+  const baseURL = String(config.public.apiBase || '').replace(/\/+$/, '')
   const token = useCookie('token')
 
   const resolveUrl = (path: string) => {
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path
+    }
+    if (baseURL.endsWith('/api/v1') && path.startsWith('/api/v1')) {
+      path = path.replace(/^\/api\/v1/, '')
     }
     if (path.startsWith('/')) {
       return `${baseURL}${path}`

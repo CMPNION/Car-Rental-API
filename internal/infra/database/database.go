@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
 )
 
 // InitDB инициализирует файл базы данных и запускает миграции
@@ -27,10 +27,10 @@ func InitDB(filepath string) *gorm.DB {
 	// Автоматическое создание таблиц на основе структур (Auto-Migration)
 	// Добавляйте сюда все ваши модели
 	err = db.AutoMigrate(
-		&models.User{},
-		&models.Car{},
-		&models.Rental{},
-		&models.Transaction{},
+		&entity.User{},
+		&entity.Car{},
+		&entity.Rental{},
+		&entity.Transaction{},
 	)
 
 	if err != nil {

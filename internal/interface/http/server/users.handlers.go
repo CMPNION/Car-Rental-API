@@ -7,8 +7,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/CMPNION/Car-Rental-API.git/internal/auth/middleware"
-	"github.com/CMPNION/Car-Rental-API.git/internal/models"
+	"github.com/CMPNION/Car-Rental-API.git/internal/entity"
+	authhttp "github.com/CMPNION/Car-Rental-API.git/internal/interface/http/auth"
 )
 
 type balanceRequest struct {
@@ -16,7 +16,7 @@ type balanceRequest struct {
 }
 
 func (s *Server) userBalanceHandler(w http.ResponseWriter, r *http.Request) {
-	userID, ok := middleware.UserIDFromContext(r.Context())
+	userID, ok := authhttp.UserIDFromContext(r.Context())
 	if !ok {
 		RespondWithError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -24,7 +24,7 @@ func (s *Server) userBalanceHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		var user models.User
+		var user entity.User
 		if err := s.db.First(&user, userID).Error; err != nil {
 			RespondWithError(w, http.StatusInternalServerError, "database error")
 			return
@@ -50,9 +50,9 @@ func (s *Server) userBalanceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var user models.User
+		var user entity.User
 	err := s.db.Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&models.User{}).Where("id = ?", userID).
+		res := tx.Model(&entity.User{}).Where("id = ?", userID).
 			Update("balance", gorm.Expr("balance + ?", req.Amount))
 		if res.Error != nil {
 			return res.Error
@@ -65,11 +65,11 @@ func (s *Server) userBalanceHandler(w http.ResponseWriter, r *http.Request) {
 			return err
 		}
 
-		transaction := models.Transaction{
+		transaction := entity.Transaction{
 			UserID: userID,
 			Type:   "topup",
 			Amount: req.Amount,
-			Status: models.TransactionStatusSuccess,
+			Status: entity.TransactionStatusSuccess,
 		}
 		if err := tx.Create(&transaction).Error; err != nil {
 			return err
