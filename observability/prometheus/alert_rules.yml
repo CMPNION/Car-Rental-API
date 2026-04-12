@@ -1,0 +1,70 @@
+groups:
+  - name: car_rental_alerts
+    rules:
+      # CRITICAL: High error rate (>5% of requests result in 5xx)
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{route=~".*5xx"}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "High HTTP error rate detected"
+          description: "More than 5% of requests are failing with 5xx errors. Current value: {{ $value | humanizePercentage }}"
+          runbook_url: "https://wiki.example.com/runbooks/backend/high-error-rate"
+
+      # WARNING: High response time (p90 > 1s)
+      - alert: HighResponseTime
+        expr: rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]) > 1.0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High HTTP response time detected"
+          description: "Average response time is above 1 second. Current value: {{ $value }}s"
+          runbook_url: "https://wiki.example.com/runbooks/backend/high-response-time"
+
+      # WARNING: Service down
+      - alert: BackendServiceDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Backend service is down"
+          description: "The car rental API backend has been down for more than 1 minute."
+
+      # WARNING: Frontend service down
+      - alert: FrontendServiceDown
+        expr: up{job="frontend"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          team: frontend
+        annotations:
+          summary: "Frontend service is down"
+          description: "The car rental frontend has been down for more than 1 minute."
+
+      # CRITICAL: Database connections exhausted
+      - alert: DatabaseConnectionsHigh
+        expr: db_connections_open > 50
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "Database connections are too high"
+          description: "Number of open database connections is {{ $value }}, approaching limit."
+
+      # WARNING: Active requests spike
+      - alert: ActiveRequestsSpike
+        expr: http_requests_active > 100
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "High number of active requests"
+          description: "There are {{ $value }} active requests, which may indicate a traffic spike or slow processing."

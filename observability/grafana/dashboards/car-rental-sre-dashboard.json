@@ -1,0 +1,528 @@
+{
+    "annotations": {
+        "list": []
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": null,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+        {
+            "title": "🚗 Car Rental API - SRE Dashboard",
+            "type": "text",
+            "gridPos": { "h": 2, "w": 24, "x": 0, "y": 0 },
+            "id": 99,
+            "options": {
+                "content": "<h1 style='text-align: center; margin: 0;'>🚗 Car Rental API - SRE Observability Dashboard</h1>",
+                "mode": "html"
+            }
+        },
+        {
+            "title": "Service Health",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 0, "y": 2 },
+            "id": 1,
+            "targets": [
+                {
+                    "expr": "up{job=\"backend\"}",
+                    "legendFormat": "Backend",
+                    "refId": "A"
+                },
+                {
+                    "expr": "up{job=\"frontend\"}",
+                    "legendFormat": "Frontend",
+                    "refId": "B"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "mappings": [
+                        { "options": { "0": { "text": "DOWN" } }, "type": "value" },
+                        { "options": { "1": { "text": "UP" } }, "type": "value" }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "red", "value": null },
+                            { "color": "green", "value": 1 }
+                        ]
+                    },
+                    "color": {
+                        "mode": "thresholds"
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "textMode": "auto"
+            }
+        },
+        {
+            "title": "Total Requests (5m)",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 6, "y": 2 },
+            "id": 2,
+            "targets": [
+                {
+                    "expr": "sum(rate(http_requests_total[5m]))",
+                    "legendFormat": "req/s",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 2,
+                    "color": { "mode": "palette-classic" }
+                }
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "center"
+            }
+        },
+        {
+            "title": "Avg Response Time",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 12, "y": 2 },
+            "id": 3,
+            "targets": [
+                {
+                    "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+                    "legendFormat": "avg latency",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "decimals": 3,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 0.5 },
+                            { "color": "red", "value": 1.0 }
+                        ]
+                    },
+                    "color": {
+                        "mode": "thresholds"
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area"
+            }
+        },
+        {
+            "title": "Active Requests",
+            "type": "stat",
+            "gridPos": { "h": 4, "w": 6, "x": 18, "y": 2 },
+            "id": 4,
+            "targets": [
+                {
+                    "expr": "http_requests_active",
+                    "legendFormat": "active",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "color": { "mode": "palette-classic" },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 50 },
+                            { "color": "red", "value": 100 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area"
+            }
+        },
+        {
+            "title": "Request Rate (by endpoint)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+            "id": 5,
+            "targets": [
+                {
+                    "expr": "rate(http_requests_total[5m])",
+                    "legendFormat": "{{route}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 2
+                }
+            },
+            "options": {
+                "legend": { "displayMode": "table", "placement": "right" }
+            }
+        },
+        {
+            "title": "Response Time Distribution",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+            "id": 6,
+            "targets": [
+                {
+                    "expr": "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m])",
+                    "legendFormat": "avg",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "s",
+                    "decimals": 3,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 0.5 },
+                            { "color": "red", "value": 1.0 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "Error Rate (5xx)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+            "id": 7,
+            "targets": [
+                {
+                    "expr": "rate(http_requests_total{route=~\".*5xx\"}[5m]) / rate(http_requests_total[5m])",
+                    "legendFormat": "error rate",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percentunit",
+                    "decimals": 3,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 0.01 },
+                            { "color": "red", "value": 0.05 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "legend": { "displayMode": "list", "placement": "bottom" }
+            }
+        },
+        {
+            "title": "Database Connections",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+            "id": 8,
+            "targets": [
+                {
+                    "expr": "db_connections_open",
+                    "legendFormat": "open connections",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "color": { "mode": "palette-classic" },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 30 },
+                            { "color": "red", "value": 50 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "Node Exporter - CPU Usage",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+            "id": 9,
+            "targets": [
+                {
+                    "expr": "100 - (avg by(instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+                    "legendFormat": "CPU Usage %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "max": 100,
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 70 },
+                            { "color": "red", "value": 90 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "Node Exporter - Memory Usage",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+            "id": 10,
+            "targets": [
+                {
+                    "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+                    "legendFormat": "Memory Usage %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "max": 100,
+                    "min": 0,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 70 },
+                            { "color": "red", "value": 90 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "SLO Compliance - Availability",
+            "type": "stat",
+            "gridPos": { "h": 6, "w": 8, "x": 0, "y": 30 },
+            "id": 11,
+            "targets": [
+                {
+                    "expr": "(1 - (sum(rate(http_requests_total{route=~\".*5xx\"}[30d])) / sum(rate(http_requests_total[30d])))) * 100",
+                    "legendFormat": "availability %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "decimals": 2,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "red", "value": null },
+                            { "color": "yellow", "value": 99.0 },
+                            { "color": "green", "value": 99.9 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "text": { "titleSize": 16, "valueSize": 40 }
+            }
+        },
+        {
+            "title": "SLO Compliance - Latency (p90 < 500ms)",
+            "type": "stat",
+            "gridPos": { "h": 6, "w": 8, "x": 8, "y": 30 },
+            "id": 12,
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_duration_seconds_bucket{le=\"0.5\"}[30d])) / sum(rate(http_request_duration_seconds_count[30d])) * 100",
+                    "legendFormat": "p90 compliance %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "decimals": 2,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "red", "value": null },
+                            { "color": "yellow", "value": 95 },
+                            { "color": "green", "value": 99 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "text": { "titleSize": 16, "valueSize": 40 }
+            }
+        },
+        {
+            "title": "Error Budget Remaining (Monthly)",
+            "type": "stat",
+            "gridPos": { "h": 6, "w": 8, "x": 16, "y": 30 },
+            "id": 13,
+            "targets": [
+                {
+                    "expr": "(0.001 - (sum(rate(http_requests_total{route=~\".*5xx\"}[30d])) / sum(rate(http_requests_total[30d])))) / 0.001 * 100",
+                    "legendFormat": "budget remaining %",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "percent",
+                    "decimals": 2,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "red", "value": null },
+                            { "color": "yellow", "value": 20 },
+                            { "color": "green", "value": 50 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "text": { "titleSize": 16, "valueSize": 40 }
+            }
+        },
+        {
+            "title": "Frontend - Memory Usage (RSS)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 36 },
+            "id": 14,
+            "targets": [
+                {
+                    "expr": "frontend_memory_rss_bytes / 1024 / 1024",
+                    "legendFormat": "RSS MB",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "decmbytes",
+                    "decimals": 1,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 200 },
+                            { "color": "red", "value": 500 }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "title": "Frontend - Page Views (by path)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 36 },
+            "id": 15,
+            "targets": [
+                {
+                    "expr": "rate(frontend_page_views_total[5m])",
+                    "legendFormat": "{{path}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 2
+                }
+            },
+            "options": {
+                "legend": { "displayMode": "table", "placement": "right" }
+            }
+        },
+        {
+            "title": "Frontend - API Calls (by endpoint)",
+            "type": "timeseries",
+            "gridPos": { "h": 8, "w": 12, "x": 0, "y": 44 },
+            "id": 16,
+            "targets": [
+                {
+                    "expr": "rate(frontend_api_calls_total[5m])",
+                    "legendFormat": "{{endpoint}}",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "reqps",
+                    "decimals": 2
+                }
+            },
+            "options": {
+                "legend": { "displayMode": "table", "placement": "right" }
+            }
+        },
+        {
+            "title": "Frontend - Errors Total",
+            "type": "stat",
+            "gridPos": { "h": 8, "w": 12, "x": 12, "y": 44 },
+            "id": 17,
+            "targets": [
+                {
+                    "expr": "frontend_errors_total",
+                    "legendFormat": "errors",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            { "color": "green", "value": null },
+                            { "color": "yellow", "value": 10 },
+                            { "color": "red", "value": 50 }
+                        ]
+                    }
+                }
+            },
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "text": { "titleSize": 16, "valueSize": 40 }
+            }
+        }
+    ],
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": ["sre", "car-rental", "production"],
+    "templating": {
+        "list": []
+    },
+    "time": {
+        "from": "now-6h",
+        "to": "now"
+    },
+    "timepicker": {},
+    "timezone": "browser",
+    "title": "Car Rental API - SRE Dashboard",
+    "uid": "car-rental-sre",
+    "version": 2,
+    "weekStart": ""
+}

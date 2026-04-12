@@ -1,55 +1,79 @@
 type ApiResponse<T> = {
-  status?: 'ok' | 'error'
-  message?: string
-  data?: T
-}
+    status?: "ok" | "error";
+    message?: string;
+    data?: T;
+};
 
 export const useApi = () => {
-  const config = useRuntimeConfig()
-  const baseURL = String(config.public.apiBase || '').replace(/\/+$/, '')
-  const token = useCookie('token')
+    const config = useRuntimeConfig();
+    const baseURL = String(config.public.apiBase || "").replace(/\/+$/, "");
+    const token = useCookie("token");
 
-  const resolveUrl = (path: string) => {
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-      return path
-    }
-    if (baseURL.endsWith('/api/v1') && path.startsWith('/api/v1')) {
-      path = path.replace(/^\/api\/v1/, '')
-    }
-    if (path.startsWith('/')) {
-      return `${baseURL}${path}`
-    }
-    return `${baseURL}/${path}`
-  }
+    const resolveUrl = (path: string) => {
+        if (path.startsWith("http://") || path.startsWith("https://")) {
+            return path;
+        }
+        if (baseURL.endsWith("/api/v1") && path.startsWith("/api/v1")) {
+            path = path.replace(/^\/api\/v1/, "");
+        }
+        if (path.startsWith("/")) {
+            return `${baseURL}${path}`;
+        }
+        return `${baseURL}/${path}`;
+    };
 
-  const unwrap = <T>(response: T | ApiResponse<T>) => {
-    if (response && typeof response === 'object' && 'status' in response) {
-      const envelope = response as ApiResponse<T>
-      if (envelope.status === 'ok') {
-        return envelope.data as T
-      }
-      if (envelope.status === 'error') {
-        const err: any = new Error(envelope.message || 'Request failed')
-        err.data = envelope
-        throw err
-      }
-    }
-    return response as T
-  }
+    const unwrap = <T>(response: T | ApiResponse<T>) => {
+        if (response && typeof response === "object" && "status" in response) {
+            const envelope = response as ApiResponse<T>;
+            if (envelope.status === "ok") {
+                return envelope.data as T;
+            }
+            if (envelope.status === "error") {
+                const err: any = new Error(envelope.message || "Request failed");
+                err.data = envelope;
+                throw err;
+            }
+        }
+        return response as T;
+    };
 
-  const fetcher = async <T>(path: string, options: any = {}) => {
-    const response = await $fetch<T | ApiResponse<T>>(resolveUrl(path), options)
-    return unwrap(response)
-  }
+    const fetcher = async <T>(path: string, options: any = {}) => {
+        // Track API call
+        if (import.meta.server) {
+            $fetch(`/api/metrics?action=track-api&endpoint=${encodeURIComponent(path)}`).catch(() => {});
+        }
+        try {
+            const response = await $fetch<T | ApiResponse<T>>(resolveUrl(path), options);
+            return unwrap(response);
+        } catch (error: any) {
+            // Track errors
+            if (import.meta.server) {
+                $fetch("/api/metrics?action=error").catch(() => {});
+            }
+            throw error;
+        }
+    };
 
-  const authFetch = async <T>(path: string, options: any = {}) => {
-    const headers = {
-      ...(options.headers ?? {}),
-      Authorization: `Bearer ${token.value ?? ''}`
-    }
-    const response = await $fetch<T | ApiResponse<T>>(resolveUrl(path), { ...options, headers })
-    return unwrap(response)
-  }
+    const authFetch = async <T>(path: string, options: any = {}) => {
+        // Track API call
+        if (import.meta.server) {
+            $fetch(`/api/metrics?action=track-api&endpoint=${encodeURIComponent(path)}`).catch(() => {});
+        }
+        const headers = {
+            ...(options.headers ?? {}),
+            Authorization: `Bearer ${token.value ?? ""}`,
+        };
+        try {
+            const response = await $fetch<T | ApiResponse<T>>(resolveUrl(path), { ...options, headers });
+            return unwrap(response);
+        } catch (error: any) {
+            // Track errors
+            if (import.meta.server) {
+                $fetch("/api/metrics?action=error").catch(() => {});
+            }
+            throw error;
+        }
+    };
 
-  return { fetcher, authFetch }
-}
+    return { fetcher, authFetch };
+};

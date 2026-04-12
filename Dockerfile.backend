@@ -1,0 +1,51 @@
+# Stage 1: Build
+FROM golang:1.24.3-alpine3.21 AS builder
+
+WORKDIR /app
+
+# Install build dependencies for CGO (SQLite)
+RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+# Copy go mod files first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the binary with optimizations
+RUN CGO_ENABLED=1 GOOS=linux go build \
+    -ldflags="-w -s -X main.Version=1.0.0" \
+    -o /car-rental-api \
+    cmd/main/main.go
+
+# Stage 2: Production
+FROM alpine:3.21
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache sqlite-libs ca-certificates tzdata wget
+
+# Create non-root user
+RUN addgroup -g 1001 appgroup && \
+    adduser -u 1001 -G appgroup -s /bin/sh -D appuser
+
+# Copy binary from builder
+COPY --from=builder /car-rental-api /app/car-rental-api
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Expose port
+EXPOSE 4000
+
+# Switch to non-root user
+USER appuser
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:4000/health || exit 1
+
+# Run the binary
+CMD ["/app/car-rental-api"]

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go *)",
+      "Bash(chmod *)"
+    ]
+  },
+  "$version": 3
+}

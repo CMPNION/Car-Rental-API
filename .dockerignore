@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile.*
+docker-compose.yml
+docker-swarm.yml
+.dockerignore
+
+# Documentation
+*.md
+docs/
+
+# Frontend node_modules
+frontend/node_modules
+frontend/.nuxt
+frontend/.output
+
+# Binary files
+*.exe
+*.test
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database
+*.db

@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # Backend Service (Go API) - 2 replicas for high availability
+  backend:
+    image: car-rental-backend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "4000:4000"
+    environment:
+      - JWT_SECRET=car-rental-secret-key
+      - DB_PATH=/data/car_rental.db
+    volumes:
+      - backend-data:/data
+    networks:
+      - car-rental-net
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+        reservations:
+          cpus: "0.5"
+          memory: 256M
+      labels:
+        - "app=car-rental"
+        - "tier=backend"
+
+  # Frontend Service (Nuxt)
+  frontend:
+    image: car-rental-frontend:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NUXT_PUBLIC_API_BASE=http://backend:4000
+      - HOST=0.0.0.0
+      - PORT=3000
+    networks:
+      - car-rental-net
+    depends_on:
+      - backend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+      labels:
+        - "app=car-rental"
+        - "tier=frontend"
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    networks:
+      - car-rental-net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+      placement:
+        constraints:
+          - node.role == manager
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./observability/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - car-rental-net
+    depends_on:
+      - prometheus
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+
+  # Node Exporter - runs on ALL nodes (global service)
+  node-exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/proc:/host/proc:ro'
+      - '/sys:/host/sys:ro'
+      - '/:/rootfs:ro'
+    networks:
+      - car-rental-net
+    deploy:
+      mode: global
+      restart_policy:
+        condition: on-failure
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+volumes:
+  backend-data:
+    driver: local
+
+networks:
+  car-rental-net:
+    driver: overlay

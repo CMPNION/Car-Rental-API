@@ -13,4 +13,5 @@ type Server struct {
 	db        *gorm.DB
 	addr      string
 	jwtSecret string
+	metrics   *Metrics
 }
